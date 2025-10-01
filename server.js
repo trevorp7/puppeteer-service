@@ -24,7 +24,6 @@ app.post("/pdf", async (req, res) => {
 
     console.log("Launching browser...");
     const browser = await puppeteer.launch({
-      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium',
       args: [
         "--no-sandbox",
         "--disable-setuid-sandbox",
@@ -34,7 +33,7 @@ app.post("/pdf", async (req, res) => {
         "--no-zygote",
         "--single-process"
       ],
-      headless: "new"
+      headless: true
     });
 
     console.log("Browser launched, creating new page...");
