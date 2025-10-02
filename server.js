@@ -69,6 +69,12 @@ app.post("/pdf", async (req, res) => {
     const page = await browser.newPage();
     page.setDefaultNavigationTimeout(60000); // Increase timeout to 60s
 
+    // Set viewport width to 1000px for better PDF layout
+    await page.setViewport({
+      width: 1000,
+      height: 1080
+    });
+
     // Add console log listener to debug page issues
     page.on('console', msg => console.log('PAGE LOG:', msg.text()));
     page.on('pageerror', error => console.error('PAGE ERROR:', error.message));
