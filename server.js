@@ -190,7 +190,6 @@ app.post("/pdf", async (req, res) => {
 
     const pdfBuffer = await page.pdf({
       width: '1200px',
-      height: 'auto',
       printBackground: true,
       timeout: 60000,
       preferCSSPageSize: false
