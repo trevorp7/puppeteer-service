@@ -69,6 +69,13 @@ app.post("/pdf", async (req, res) => {
     const page = await browser.newPage();
     page.setDefaultNavigationTimeout(60000); // Increase timeout to 60s
 
+    // Set viewport to a larger size to avoid zoom/scaling issues
+    await page.setViewport({
+      width: 1920,
+      height: 1080,
+      deviceScaleFactor: 1
+    });
+
     // Add console log listener to debug page issues
     page.on('console', msg => console.log('PAGE LOG:', msg.text()));
     page.on('pageerror', error => console.error('PAGE ERROR:', error.message));
@@ -144,10 +151,27 @@ app.post("/pdf", async (req, res) => {
     }
 
     console.log("Generating PDF...");
+
+    // Hide the app header before generating PDF
+    await page.evaluate(() => {
+      // Hide the header with controls (Stage 1, 2, 3 sections)
+      const header = document.querySelector('header');
+      if (header) {
+        header.style.display = 'none';
+      }
+    });
+
     const pdfBuffer = await page.pdf({
       format: "A4",
       printBackground: true,
-      timeout: 60000
+      timeout: 60000,
+      scale: 0.8, // Scale down slightly to fit better
+      margin: {
+        top: '10mm',
+        bottom: '10mm',
+        left: '10mm',
+        right: '10mm'
+      }
     });
 
     console.log("Closing browser...");
