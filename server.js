@@ -183,20 +183,14 @@ app.post("/pdf", async (req, res) => {
       document.body.style.background = 'white';
       document.documentElement.style.background = 'white';
 
-      // Add 24px padding to the body
-      document.body.style.padding = '24px';
+      // Add 32px top padding only
+      document.body.style.paddingTop = '32px';
+      document.body.style.paddingLeft = '0';
+      document.body.style.paddingRight = '0';
+      document.body.style.paddingBottom = '0';
 
-      // Force full width layout and override any responsive constraints
-      document.body.style.width = '100%';
-      document.body.style.maxWidth = 'none';
+      // Set minimum width but don't force full width to avoid white rails
       document.body.style.minWidth = '900px';
-
-      // Override any container max-widths that might be limiting the layout
-      const containers = document.querySelectorAll('[class*="container"], [class*="max-w"], [class*="w-full"]');
-      containers.forEach(container => {
-        container.style.maxWidth = 'none';
-        container.style.width = '100%';
-      });
 
       // Log the actual viewport dimensions for debugging
       console.log('Viewport dimensions:', {
