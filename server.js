@@ -69,9 +69,9 @@ app.post("/pdf", async (req, res) => {
     const page = await browser.newPage();
     page.setDefaultNavigationTimeout(60000); // Increase timeout to 60s
 
-    // Set viewport width to 1200px for better PDF layout
+    // Set viewport width to 800px for better PDF layout
     await page.setViewport({
-      width: 1200,
+      width: 800,
       height: 1080,
       deviceScaleFactor: 1
     });
@@ -157,12 +157,27 @@ app.post("/pdf", async (req, res) => {
       // Hide the header with controls (Stage 1, 2, 3 sections)
       const header = document.querySelector('header');
       if (header) {
-        header.style.display = 'none';
+        header.remove(); // Remove instead of hiding to collapse the space
       }
 
-      // Remove top margin/padding from body to eliminate whitespace
+      // Remove top margin/padding from all elements
       document.body.style.marginTop = '0';
       document.body.style.paddingTop = '0';
+      document.documentElement.style.marginTop = '0';
+      document.documentElement.style.paddingTop = '0';
+
+      // Find and remove padding from the root div and main containers
+      const root = document.querySelector('#root');
+      if (root) {
+        root.style.paddingTop = '0';
+        root.style.marginTop = '0';
+      }
+
+      const main = document.querySelector('main');
+      if (main) {
+        main.style.paddingTop = '0';
+        main.style.marginTop = '0';
+      }
 
       // Remove background color to avoid gray inner content
       document.body.style.background = 'white';
@@ -171,8 +186,8 @@ app.post("/pdf", async (req, res) => {
       // Force full width layout and override any responsive constraints
       document.body.style.width = '100%';
       document.body.style.maxWidth = 'none';
-      document.body.style.minWidth = '1200px';
-      
+      document.body.style.minWidth = '800px';
+
       // Override any container max-widths that might be limiting the layout
       const containers = document.querySelectorAll('[class*="container"], [class*="max-w"], [class*="w-full"]');
       containers.forEach(container => {
@@ -189,10 +204,16 @@ app.post("/pdf", async (req, res) => {
     });
 
     const pdfBuffer = await page.pdf({
-      width: '1200px',
+      width: '800px',
       printBackground: true,
       timeout: 60000,
-      preferCSSPageSize: false
+      preferCSSPageSize: false,
+      margin: {
+        top: '0px',
+        right: '0px',
+        bottom: '0px',
+        left: '0px'
+      }
     });
 
     console.log("Closing browser...");
