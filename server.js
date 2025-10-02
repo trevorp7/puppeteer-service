@@ -183,6 +183,9 @@ app.post("/pdf", async (req, res) => {
       document.body.style.background = 'white';
       document.documentElement.style.background = 'white';
 
+      // Add 24px padding to the body
+      document.body.style.padding = '24px';
+
       // Force full width layout and override any responsive constraints
       document.body.style.width = '100%';
       document.body.style.maxWidth = 'none';
@@ -207,13 +210,7 @@ app.post("/pdf", async (req, res) => {
       width: '900px',
       printBackground: true,
       timeout: 60000,
-      preferCSSPageSize: false,
-      margin: {
-        top: '20px',
-        right: '20px',
-        bottom: '20px',
-        left: '20px'
-      }
+      preferCSSPageSize: false
     });
 
     console.log("Closing browser...");
