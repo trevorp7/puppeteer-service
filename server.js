@@ -116,7 +116,23 @@ app.post("/pdf", async (req, res) => {
         console.warn("Navigation timed out or failed, continuing with current content", navErr?.message);
       }
 
-      // Wait a bit for any dynamic content to load
+      // Wait for the loading indicator to disappear (for React apps)
+      console.log("Waiting for content to load...");
+      try {
+        // Wait for loading text to disappear (max 30 seconds)
+        await page.waitForFunction(
+          () => {
+            const body = document.body.innerText;
+            return !body.includes('Loading roof access report');
+          },
+          { timeout: 30000 }
+        );
+        console.log("Content loaded successfully");
+      } catch (waitErr) {
+        console.warn("Timeout waiting for content, proceeding anyway", waitErr?.message);
+      }
+
+      // Additional wait for any animations/transitions
       await page.waitForTimeout(2000);
     } else {
       console.log("Setting HTML content...");
