@@ -8,7 +8,7 @@ COPY package*.json ./
 
 # Install dependencies (skip Chromium download since base image has it)
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
-RUN npm ci --only=production
+RUN npm install --only=production
 
 # Copy app files
 COPY . .

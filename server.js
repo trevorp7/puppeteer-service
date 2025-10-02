@@ -2,6 +2,25 @@ import express from "express";
 import puppeteer from "puppeteer";
 
 const app = express();
+app.set("trust proxy", 1);
+
+// Basic request logging to help debug stalled requests
+app.use((req, res, next) => {
+  const startedAt = Date.now();
+  console.log(
+    `${new Date().toISOString()} -> ${req.method} ${req.originalUrl} from ${
+      req.headers["x-forwarded-for"] || req.ip
+    }`
+  );
+  res.on("close", () => {
+    console.log(
+      `${new Date().toISOString()} <- ${req.method} ${req.originalUrl} ` +
+        `${res.statusCode} (${Date.now() - startedAt}ms)`
+    );
+  });
+  next();
+});
+
 app.use(express.json({ limit: "10mb" }));
 
 // Health check route
@@ -33,18 +52,31 @@ app.post("/pdf", async (req, res) => {
         "--no-zygote",
         "--single-process"
       ],
-      headless: true
+      headless: true,
+      executablePath: puppeteer.executablePath?.() || undefined
     });
 
     console.log("Browser launched, creating new page...");
     const page = await browser.newPage();
+    page.setDefaultNavigationTimeout(45000);
 
     if (url) {
       console.log(`Navigating to URL: ${url}`);
-      await page.goto(url, { waitUntil: "networkidle0", timeout: 60000 });
+      try {
+        await page.goto(url, {
+          waitUntil: ["load", "domcontentloaded"],
+          timeout: 45000
+        });
+      } catch (navErr) {
+        console.warn("Navigation timed out or failed, continuing with current content", navErr?.message);
+      }
     } else {
       console.log("Setting HTML content...");
-      await page.setContent(html, { waitUntil: "networkidle0", timeout: 60000 });
+      try {
+        await page.setContent(html, { waitUntil: "load", timeout: 45000 });
+      } catch (contentErr) {
+        console.warn("setContent timed out or failed, continuing to PDF", contentErr?.message);
+      }
     }
 
     console.log("Generating PDF...");
@@ -73,4 +105,12 @@ const port = process.env.PORT || 10000;
 app.listen(port, () => {
   console.log(`PDF service running on port ${port}`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+});
+
+// Global error visibility
+process.on("unhandledRejection", (reason) => {
+  console.error("Unhandled Rejection:", reason);
+});
+process.on("uncaughtException", (err) => {
+  console.error("Uncaught Exception:", err);
 });
