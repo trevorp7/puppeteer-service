@@ -29,12 +29,12 @@ app.get("/", (req, res) => {
   res.send("Puppeteer service is running ✅");
 });
 
-// PDF generation endpoint: POST /pdf with { url } or { html }
+// PDF generation endpoint: POST /pdf with { url } or { html } or { url, localStorage }
 app.post("/pdf", async (req, res) => {
   console.log("POST /pdf hit", req.body);
 
   try {
-    const { url, html } = req.body;
+    const { url, html, localStorage: localStorageData } = req.body;
 
     if (!url && !html) {
       console.log("Missing url or html in request body");
@@ -62,6 +62,24 @@ app.post("/pdf", async (req, res) => {
 
     if (url) {
       console.log(`Navigating to URL: ${url}`);
+
+      // If localStorage data is provided, inject it before navigation
+      if (localStorageData) {
+        console.log("Injecting localStorage data...");
+        // Navigate to the domain first to set localStorage
+        const urlObj = new URL(url);
+        await page.goto(`${urlObj.origin}`, { waitUntil: 'domcontentloaded' });
+
+        // Set localStorage items
+        await page.evaluate((data) => {
+          for (const [key, value] of Object.entries(data)) {
+            localStorage.setItem(key, value);
+          }
+        }, localStorageData);
+
+        console.log("localStorage injected successfully");
+      }
+
       try {
         await page.goto(url, {
           waitUntil: ["load", "domcontentloaded"],
