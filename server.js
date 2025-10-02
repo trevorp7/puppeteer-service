@@ -69,10 +69,11 @@ app.post("/pdf", async (req, res) => {
     const page = await browser.newPage();
     page.setDefaultNavigationTimeout(60000); // Increase timeout to 60s
 
-    // Set viewport width to 1000px for better PDF layout
+    // Set viewport width to 1200px for better PDF layout
     await page.setViewport({
-      width: 1000,
-      height: 1080
+      width: 1200,
+      height: 1080,
+      deviceScaleFactor: 1
     });
 
     // Add console log listener to debug page issues
@@ -166,12 +167,33 @@ app.post("/pdf", async (req, res) => {
       // Remove background color to avoid gray inner content
       document.body.style.background = 'white';
       document.documentElement.style.background = 'white';
+
+      // Force full width layout and override any responsive constraints
+      document.body.style.width = '100%';
+      document.body.style.maxWidth = 'none';
+      document.body.style.minWidth = '1200px';
+      
+      // Override any container max-widths that might be limiting the layout
+      const containers = document.querySelectorAll('[class*="container"], [class*="max-w"], [class*="w-full"]');
+      containers.forEach(container => {
+        container.style.maxWidth = 'none';
+        container.style.width = '100%';
+      });
+
+      // Log the actual viewport dimensions for debugging
+      console.log('Viewport dimensions:', {
+        width: window.innerWidth,
+        height: window.innerHeight,
+        devicePixelRatio: window.devicePixelRatio
+      });
     });
 
     const pdfBuffer = await page.pdf({
-      format: "A4",
+      width: '1200px',
+      height: 'auto',
       printBackground: true,
-      timeout: 60000
+      timeout: 60000,
+      preferCSSPageSize: false
     });
 
     console.log("Closing browser...");
