@@ -7,9 +7,10 @@ app = 'puppeteer-service-dqpthw'
 primary_region = 'iad'
 
 [build]
+  dockerfile = "Dockerfile"
 
 [http_service]
-  internal_port = 3000
+  internal_port = 10000
   force_https = true
   auto_stop_machines = 'stop'
   auto_start_machines = true
@@ -17,6 +18,9 @@ primary_region = 'iad'
   processes = ['app']
 
 [[vm]]
-  memory = '1gb'
+  memory = '2gb'
   cpu_kind = 'shared'
   cpus = 1
+
+[env]
+  NODE_ENV = 'production'

@@ -42,23 +42,36 @@ app.post("/pdf", async (req, res) => {
     }
 
     console.log("Launching browser...");
-    const browser = await puppeteer.launch({
-      args: [
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-        "--disable-accelerated-2d-canvas",
-        "--no-first-run",
-        "--no-zygote",
-        "--single-process"
-      ],
-      headless: true,
-      executablePath: puppeteer.executablePath?.() || undefined
-    });
+    let browser;
+    try {
+      browser = await puppeteer.launch({
+        args: [
+          "--no-sandbox",
+          "--disable-setuid-sandbox",
+          "--disable-dev-shm-usage",
+          "--disable-accelerated-2d-canvas",
+          "--no-first-run",
+          "--no-zygote",
+          "--single-process"
+        ],
+        headless: true,
+        executablePath: puppeteer.executablePath?.() || undefined
+      });
+    } catch (launchErr) {
+      console.error("Failed to launch browser:", launchErr);
+      return res.status(500).json({
+        error: "Failed to launch browser",
+        details: launchErr.message
+      });
+    }
 
     console.log("Browser launched, creating new page...");
     const page = await browser.newPage();
-    page.setDefaultNavigationTimeout(45000);
+    page.setDefaultNavigationTimeout(60000); // Increase timeout to 60s
+
+    // Add console log listener to debug page issues
+    page.on('console', msg => console.log('PAGE LOG:', msg.text()));
+    page.on('pageerror', error => console.error('PAGE ERROR:', error.message));
 
     if (url) {
       console.log(`Navigating to URL: ${url}`);
@@ -66,28 +79,45 @@ app.post("/pdf", async (req, res) => {
       // If localStorage data is provided, inject it before navigation
       if (localStorageData) {
         console.log("Injecting localStorage data...");
-        // Navigate to the domain first to set localStorage
-        const urlObj = new URL(url);
-        await page.goto(`${urlObj.origin}`, { waitUntil: 'domcontentloaded' });
+        console.log("LocalStorage keys:", Object.keys(localStorageData));
 
-        // Set localStorage items
-        await page.evaluate((data) => {
-          for (const [key, value] of Object.entries(data)) {
-            localStorage.setItem(key, value);
-          }
-        }, localStorageData);
+        try {
+          // Navigate to the domain first to set localStorage
+          const urlObj = new URL(url);
+          console.log(`First navigation to: ${urlObj.origin}`);
+          await page.goto(`${urlObj.origin}`, {
+            waitUntil: 'domcontentloaded',
+            timeout: 30000
+          });
 
-        console.log("localStorage injected successfully");
+          // Set localStorage items
+          await page.evaluate((data) => {
+            for (const [key, value] of Object.entries(data)) {
+              console.log(`Setting localStorage: ${key}`);
+              localStorage.setItem(key, value);
+            }
+          }, localStorageData);
+
+          console.log("localStorage injected successfully");
+        } catch (storageErr) {
+          console.error("Error injecting localStorage:", storageErr);
+          // Continue anyway - maybe the page doesn't need auth
+        }
       }
 
       try {
+        console.log(`Final navigation to: ${url}`);
         await page.goto(url, {
-          waitUntil: ["load", "domcontentloaded"],
-          timeout: 45000
+          waitUntil: ["load", "domcontentloaded", "networkidle2"],
+          timeout: 60000
         });
+        console.log("Navigation completed successfully");
       } catch (navErr) {
         console.warn("Navigation timed out or failed, continuing with current content", navErr?.message);
       }
+
+      // Wait a bit for any dynamic content to load
+      await page.waitForTimeout(2000);
     } else {
       console.log("Setting HTML content...");
       try {
@@ -100,7 +130,8 @@ app.post("/pdf", async (req, res) => {
     console.log("Generating PDF...");
     const pdfBuffer = await page.pdf({
       format: "A4",
-      printBackground: true
+      printBackground: true,
+      timeout: 60000
     });
 
     console.log("Closing browser...");
@@ -115,7 +146,12 @@ app.post("/pdf", async (req, res) => {
     res.send(pdfBuffer);
   } catch (err) {
     console.error("Error generating PDF:", err);
-    res.status(500).json({ error: err.message, stack: err.stack });
+    console.error("Stack trace:", err.stack);
+    res.status(500).json({
+      error: err.message,
+      stack: err.stack,
+      type: err.constructor.name
+    });
   }
 });
 
